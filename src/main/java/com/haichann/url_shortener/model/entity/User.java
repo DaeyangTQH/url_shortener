@@ -1,7 +1,42 @@
 package com.haichann.url_shortener.model.entity;
 
-import jakarta.persistence.Entity;
+import com.haichann.url_shortener.base.BaseEntity;
+import jakarta.persistence.*;
+import lombok.*;
+import lombok.experimental.FieldDefaults;
+
+import java.time.LocalDateTime;
+import java.util.List;
 
 @Entity
-public class User {
+@Table(name = "user")
+@FieldDefaults(level = AccessLevel.PRIVATE)
+@Getter
+@Setter
+@Builder
+@AllArgsConstructor
+@NoArgsConstructor
+public class User extends BaseEntity {
+
+    @ManyToOne
+    @JoinColumn(name = "role_id")
+    Role role;
+
+    @OneToMany(mappedBy = "user", orphanRemoval = true, cascade = CascadeType.ALL)
+    List<UrlShorten> urlShortenList;
+
+    String username;
+    String passwordHash;
+    String email;
+    Boolean emailVerified;
+    @Enumerated(EnumType.STRING)
+    UserStatus status;
+    LocalDateTime lastLoginAt;
+    String avatarImageUrl;
+
+
+    public enum UserStatus {
+        INACTIVE, BLOCKED, ACTIVE
+    }
+
 }

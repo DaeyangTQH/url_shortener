@@ -1,7 +1,24 @@
 package com.haichann.url_shortener.model.entity;
 
-import jakarta.persistence.Entity;
+import com.haichann.url_shortener.base.BaseEntity;
+import jakarta.persistence.*;
+import lombok.*;
+import lombok.experimental.FieldDefaults;
+
+import java.util.List;
 
 @Entity
-public class Role {
+@Table(name = "role")
+@FieldDefaults(level = AccessLevel.PRIVATE)
+@Getter
+@Setter
+@Builder
+@AllArgsConstructor
+@NoArgsConstructor
+public class Role extends BaseEntity {
+
+    @OneToMany(mappedBy = "role")
+    List<User> users;
+
+    String roleName;
 }
