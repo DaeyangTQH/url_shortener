@@ -1,0 +1,67 @@
+databaseChangeLog:
+  - changeSet:
+      id: 003-create-click-event
+      author: Haichan
+      changes:
+        - createTable:
+            tableName: click_event
+            columns:
+              - column:
+                  name: id
+                  type: bigint
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+
+              - column:
+                  name: url_id
+                  type: bigint
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: ip_address
+                  type: varchar(45)
+
+              - column:
+                  name: user_agent
+                  type: text
+
+              - column:
+                  name: referer
+                  type: text
+
+              - column:
+                  name: country
+                  type: varchar(10)
+
+              - column:
+                  name: device_type
+                  type: varchar(20)
+
+              - column:
+                  name: browser
+                  type: varchar(50)
+
+              - column:
+                  name: os
+                  type: varchar(50)
+
+              - column:
+                  name: clicked_at
+                  type: timestamp
+                  constraints:
+                    nullable: false
+        - addForeignKeyConstraint:
+            baseTableName: click_event
+            baseColumnNames: url_id
+            referencedTableName: url_shorten
+            referencedColumnNames: id
+            constraintName: fk_click_event_url
+        - createIndex:
+            tableName: click_event
+            indexName: idx_click_event_url_id
+            columns:
+                - column:
+                    name: url_id

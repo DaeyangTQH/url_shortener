@@ -6,6 +6,7 @@ import lombok.*;
 import lombok.experimental.FieldDefaults;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Entity
 @Table(name = "url_shorten")
@@ -21,6 +22,9 @@ public class UrlShorten extends BaseEntity {
     @JoinColumn(name = "user_id")
     User user;
 
+    @OneToMany(mappedBy = "urlShorten")
+    List<ClickEvent> clickEvents;
+
     @Column(name = "short_code")
     String shortCode;
     @Column(name = "original_url")
@@ -35,13 +39,7 @@ public class UrlShorten extends BaseEntity {
     Integer maxClicks;
     @Column(name = "click_count")
     Integer clickCount;
-    @Column(name = "last_access")
-    LocalDateTime lastAccess;
-
-    @Column(name = "created_ip")
-    String createdIP;
-    @Column(name = "last_access_ip")
-    String lastAccessIP;
-
+    @Column(name = "last_accessed_at")
+    LocalDateTime lastAccessedAt;
 
 }

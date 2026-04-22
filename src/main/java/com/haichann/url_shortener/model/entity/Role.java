@@ -20,5 +20,6 @@ public class Role extends BaseEntity {
     @OneToMany(mappedBy = "role")
     List<User> users;
 
+    @Column(name = "role_name")
     String roleName;
 }
