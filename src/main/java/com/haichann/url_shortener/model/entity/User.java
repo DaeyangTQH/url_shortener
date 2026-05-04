@@ -1,6 +1,7 @@
 package com.haichann.url_shortener.model.entity;
 
 import com.haichann.url_shortener.base.BaseEntity;
+import com.haichann.url_shortener.model.enums.UserStatus;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
@@ -33,10 +34,5 @@ public class User extends BaseEntity {
     UserStatus status;
     LocalDateTime lastLoginAt;
     String avatarImageUrl;
-
-
-    public enum UserStatus {
-        INACTIVE, BLOCKED, ACTIVE
-    }
 
 }
