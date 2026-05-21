@@ -1,6 +1,6 @@
 package com.haichann.url_shortener.exception;
 
-import com.haichann.url_shortener.model.dto.response.ApiResponse;
+import com.haichann.url_shortener.base.ApiResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;

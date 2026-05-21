@@ -1,4 +1,4 @@
-package com.haichann.url_shortener.model.dto.response;
+package com.haichann.url_shortener.base;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.*;

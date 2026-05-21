@@ -26,4 +26,6 @@ spring:
 
 jwt:
   secret-key: ${JWT_SECRET}
+  issuer: url_shortener
+  expiration: 1800000
 
