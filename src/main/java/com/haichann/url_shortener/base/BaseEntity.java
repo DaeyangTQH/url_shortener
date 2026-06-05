@@ -24,4 +24,10 @@ public abstract class BaseEntity {
     @Column(name = "is_deleted")
     Boolean isDeleted;
 
+    @PrePersist
+    protected void onCreate() {
+        createdAt = LocalDateTime.now();
+        isDeleted = false;
+    }
+
 }

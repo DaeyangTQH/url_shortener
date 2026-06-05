@@ -39,3 +39,5 @@ build/
 
 ### docker local ###
 docker-compose.dev.yaml
+
+rules.md

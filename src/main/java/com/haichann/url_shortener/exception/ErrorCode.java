@@ -7,23 +7,25 @@ import lombok.Getter;
 @Getter
 public enum ErrorCode {
 
-    INVALID_REQUEST(1000, "Invalid request", HttpStatus.BAD_REQUEST),
-    UNAUTHENTICATED(1001, "Authentication is required", HttpStatus.UNAUTHORIZED),
-    PERMISSION_DENIED(1002, "Permission denied", HttpStatus.FORBIDDEN),
-    RESOURCE_NOT_FOUND(1003, "Resource not found", HttpStatus.NOT_FOUND),
-    CONFLICT(1004, "Resource conflict", HttpStatus.CONFLICT),
-    VALIDATION_ERROR(1005, "Validation failed", HttpStatus.UNPROCESSABLE_ENTITY),
-    RATE_LIMITED(1006, "Too many requests", HttpStatus.TOO_MANY_REQUESTS),
-    SERVICE_UNAVAILABLE(1007, "Service temporarily unavailable", HttpStatus.SERVICE_UNAVAILABLE),
-    INTERNAL_ERROR(1999, "Internal server error", HttpStatus.INTERNAL_SERVER_ERROR),
-    UNCATEGORIZED_EXCEPTION(9999, "Uncategorized request", HttpStatus.UNAUTHORIZED);
+    INVALID_REQUEST("Invalid request", HttpStatus.BAD_REQUEST),
+    UNAUTHENTICATED("Authentication is required", HttpStatus.UNAUTHORIZED),
+    PERMISSION_DENIED("Permission denied", HttpStatus.FORBIDDEN),
+    RESOURCE_NOT_FOUND("Resource not found", HttpStatus.NOT_FOUND),
+    CONFLICT("Resource conflict", HttpStatus.CONFLICT),
+    RATE_LIMITED("Too many requests", HttpStatus.TOO_MANY_REQUESTS),
+    SERVICE_UNAVAILABLE("Service temporarily unavailable", HttpStatus.SERVICE_UNAVAILABLE),
+    INTERNAL_ERROR("Internal server error", HttpStatus.INTERNAL_SERVER_ERROR),
+    UNCATEGORIZED_EXCEPTION("Uncategorized request", HttpStatus.INTERNAL_SERVER_ERROR),
 
-    private final int code;
+    INVALID_CREDENTIALS("Invalid email or password", HttpStatus.UNAUTHORIZED),
+
+    TOKEN_EXPIRED("Token expired", HttpStatus.UNAUTHORIZED),
+    INVALID_TOKEN("Invalid token", HttpStatus.UNAUTHORIZED);
+
     private final String message;
     private final HttpStatus statusCode;
 
-    ErrorCode(int code, String message, HttpStatus statusCode) {
-        this.code = code;
+    ErrorCode(String message, HttpStatus statusCode) {
         this.message = message;
         this.statusCode = statusCode;
     }

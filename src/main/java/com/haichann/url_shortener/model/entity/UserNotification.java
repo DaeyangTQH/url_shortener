@@ -24,6 +24,14 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 public class UserNotification {
 
+    @ManyToOne
+    @JoinColumn(name = "notification_template_id", nullable = false)
+    NotificationTemplate template;
+
+    @ManyToOne
+    @JoinColumn(name = "user_id", nullable = false)
+    User user;
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     Long id;
