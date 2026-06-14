@@ -34,8 +34,8 @@ public class JwtHelper {
     String issuer;
 
     @NonFinal
-    @Value("${jwt.expiration}")
-    long expiration;
+    @Value("${jwt.expiration-minutes}")
+    long expirationMinutes;
 
 
     public String validateToken(String token) {
@@ -44,6 +44,9 @@ public class JwtHelper {
             JWSVerifier verifier = new MACVerifier(secretKey.getBytes());
             if (jwsObject.verify(verifier)) {
                 JWTClaimsSet claimsSet = JWTClaimsSet.parse(jwsObject.getPayload().toJSONObject());
+                if (!issuer.equals(claimsSet.getIssuer())) {
+                    throw new AppException(ErrorCode.INVALID_TOKEN);
+                }
                 if (claimsSet.getExpirationTime().before(new Date())) {
                     throw new AppException(ErrorCode.TOKEN_EXPIRED);
                 }
@@ -60,10 +63,10 @@ public class JwtHelper {
         JWSHeader header = new JWSHeader(JWSAlgorithm.HS512);
 
         JWTClaimsSet claims = new JWTClaimsSet.Builder()
-                .subject(user.getUsername())
+                .subject(user.getEmail())
                 .issuer(issuer)
                 .issueTime(new Date())
-                .expirationTime(Date.from(Instant.now().plus(expiration, ChronoUnit.MINUTES)))
+                .expirationTime(Date.from(Instant.now().plus(expirationMinutes, ChronoUnit.MINUTES)))
                 .claim("scope", buildScope(user))
                 .claim("email", user.getEmail())
                 .build();
@@ -81,4 +84,6 @@ public class JwtHelper {
         if(user.getRole() == null) return "";
         return user.getRole().getRoleName();
     }
+
+
 }

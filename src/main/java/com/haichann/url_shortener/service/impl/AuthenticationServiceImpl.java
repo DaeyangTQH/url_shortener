@@ -8,6 +8,7 @@ import com.haichann.url_shortener.model.dto.request.LocalRegisterRequest;
 import com.haichann.url_shortener.model.dto.response.AuthenticationResponse;
 import com.haichann.url_shortener.model.entity.User;
 import com.haichann.url_shortener.model.enums.UserStatus;
+import com.haichann.url_shortener.repository.RoleRepo;
 import com.haichann.url_shortener.repository.UserRepo;
 import com.haichann.url_shortener.service.AuthenticationService;
 import lombok.AccessLevel;
@@ -24,6 +25,7 @@ import java.time.LocalDateTime;
 public class AuthenticationServiceImpl implements AuthenticationService {
 
     UserRepo userRepo;
+    RoleRepo roleRepo;
     JwtHelper jwtHelper;
     PasswordEncoder passwordEncoder;
 
@@ -52,6 +54,33 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
     @Override
     public AuthenticationResponse register(LocalRegisterRequest request) {
-        return null;
+        if (userRepo.existsByEmail(request.getEmail())) {
+            throw new AppException(ErrorCode.CONFLICT, "error.email_exists");
+        }
+
+        if (userRepo.existsByUsername(request.getUsername())) {
+            throw new AppException(ErrorCode.CONFLICT, "error.username_exists");
+        }
+
+        var userRole = roleRepo.findByRoleName("USER")
+                .orElseThrow(() -> new AppException(ErrorCode.INTERNAL_ERROR, "error.default_user_role_missing"));
+
+        User user = User.builder()
+                .username(request.getUsername())
+                .email(request.getEmail())
+                .passwordHash(passwordEncoder.encode(request.getPassword()))
+                .role(userRole)
+                .status(UserStatus.ACTIVE)
+                .emailVerified(false)
+                .avatarImageUrl("")
+                .build();
+
+        User savedUser = userRepo.save(user);
+        String token = jwtHelper.generateToken(savedUser);
+
+        return AuthenticationResponse.builder()
+                .authenticated(true)
+                .accessToken(token)
+                .build();
     }
 }
