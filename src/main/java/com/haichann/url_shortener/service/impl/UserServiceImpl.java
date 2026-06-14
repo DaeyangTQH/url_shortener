@@ -2,6 +2,9 @@ package com.haichann.url_shortener.service.impl;
 
 import com.haichann.url_shortener.exception.AppException;
 import com.haichann.url_shortener.exception.ErrorCode;
+import com.haichann.url_shortener.mapper.UserMapper;
+import com.haichann.url_shortener.model.dto.request.ChangePasswordRequest;
+import com.haichann.url_shortener.model.dto.request.UpdateMyInfoRequest;
 import com.haichann.url_shortener.model.dto.response.ProfileDTO;
 import com.haichann.url_shortener.model.entity.User;
 import com.haichann.url_shortener.model.enums.UserStatus;
@@ -20,50 +23,45 @@ import org.springframework.stereotype.Service;
 public class UserServiceImpl implements UserService {
 
     UserRepo userRepo;
+    UserMapper userMapper;
     PasswordEncoder passwordEncoder;
 
     @Override
     public ProfileDTO getMyProfile(String email) {
-        User user = getUserByEmailOrThrow(email);
-        return ProfileDTO.builder()
-                .id(String.valueOf(user.getId()))
-                .username(user.getUsername())
-                .email(user.getEmail())
-                .emailVerified(user.getEmailVerified())
-                .status(user.getStatus())
-                .avatarImageUrl(user.getAvatarImageUrl())
-                .roleName(user.getRole() == null ? null : user.getRole().getRoleName())
-                .build();
+        return userMapper.toProfileDTO(getUserByEmailOrThrow(email));
     }
 
     @Override
-    public User updateMyInfo(String email, User user) {
+    public ProfileDTO updateMyInfo(String email, UpdateMyInfoRequest request) {
         User currentUser = getUserByEmailOrThrow(email);
-        if (user.getUsername() != null) {
-            currentUser.setUsername(user.getUsername());
+        if (request.getUsername() != null && !request.getUsername().equals(currentUser.getUsername())) {
+            if (userRepo.existsByUsername(request.getUsername())) {
+                throw new AppException(ErrorCode.CONFLICT, "error.username_exists");
+            }
+            currentUser.setUsername(request.getUsername());
         }
-        if (user.getAvatarImageUrl() != null) {
-            currentUser.setAvatarImageUrl(user.getAvatarImageUrl());
+        if (request.getAvatarImageUrl() != null) {
+            currentUser.setAvatarImageUrl(request.getAvatarImageUrl());
         }
-        return userRepo.save(currentUser);
+        return userMapper.toProfileDTO(userRepo.save(currentUser));
     }
 
     @Override
-    public User changePassword(String email, String newPasswordHash) {
+    public void changePassword(String email, ChangePasswordRequest request) {
         User currentUser = getUserByEmailOrThrow(email);
-        currentUser.setPasswordHash(passwordEncoder.encode(newPasswordHash));
-        return userRepo.save(currentUser);
+        currentUser.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+        userRepo.save(currentUser);
     }
 
     @Override
-    public User deactivateMyAccount(String email) {
+    public void deactivateMyAccount(String email) {
         User currentUser = getUserByEmailOrThrow(email);
         currentUser.setStatus(UserStatus.INACTIVE);
-        return userRepo.save(currentUser);
+        userRepo.save(currentUser);
     }
 
     private User getUserByEmailOrThrow(String email) {
         return userRepo.getUserByEmail(email)
-                .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND, "User not found"));
+                .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND, "error.user_not_found"));
     }
 }
