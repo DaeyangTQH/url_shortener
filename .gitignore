@@ -41,3 +41,5 @@ build/
 docker-compose.dev.yaml
 
 rules.md
+
+schema.png
