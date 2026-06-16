@@ -18,4 +18,7 @@ public class AuthenticationResponse {
 
     @Schema(description = "JWT access token used as a Bearer token for authenticated endpoints.")
     String accessToken;
+
+    @Schema(description = "Refresh token used to obtain new access tokens without re-authenticating.")
+    String refreshToken;
 }

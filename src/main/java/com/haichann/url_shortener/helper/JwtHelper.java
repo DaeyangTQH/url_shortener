@@ -15,15 +15,17 @@ import lombok.experimental.NonFinal;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import java.security.SecureRandom;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.Base64;
 import java.util.Date;
+import java.util.UUID;
 
 @Component
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 @RequiredArgsConstructor
 public class JwtHelper {
-    UserRepo userRepo;
 
     @NonFinal
     @Value("${jwt.secret-key}")
@@ -39,6 +41,10 @@ public class JwtHelper {
 
 
     public String validateToken(String token) {
+        return validateTokenAndGetClaims(token).getSubject();
+    }
+
+    public JWTClaimsSet validateTokenAndGetClaims(String token) {
         try {
             JWSObject jwsObject = JWSObject.parse(token);
             JWSVerifier verifier = new MACVerifier(secretKey.getBytes());
@@ -50,7 +56,7 @@ public class JwtHelper {
                 if (claimsSet.getExpirationTime().before(new Date())) {
                     throw new AppException(ErrorCode.TOKEN_EXPIRED);
                 }
-                return claimsSet.getSubject();
+                return claimsSet;
             } else {
                 throw new AppException(ErrorCode.INVALID_TOKEN);
             }
@@ -65,6 +71,7 @@ public class JwtHelper {
         JWTClaimsSet claims = new JWTClaimsSet.Builder()
                 .subject(user.getEmail())
                 .issuer(issuer)
+                .jwtID(UUID.randomUUID().toString())
                 .issueTime(new Date())
                 .expirationTime(Date.from(Instant.now().plus(expirationMinutes, ChronoUnit.MINUTES)))
                 .claim("scope", buildScope(user))
@@ -78,6 +85,14 @@ public class JwtHelper {
         } catch (JOSEException e) {
             throw new AppException(ErrorCode.INTERNAL_ERROR);
         }
+    }
+
+    public String generateRefreshToken() {
+        byte[] randomBytes = new byte[64];
+        new SecureRandom().nextBytes(randomBytes);
+
+        return Base64.getUrlEncoder()
+                .withoutPadding().encodeToString(randomBytes);
     }
 
     private String buildScope(User user) {

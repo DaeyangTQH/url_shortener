@@ -2,15 +2,14 @@ package com.haichann.url_shortener.controller;
 
 import com.haichann.url_shortener.base.ApiResponse;
 import com.haichann.url_shortener.model.dto.request.LocalRegisterRequest;
+import com.haichann.url_shortener.model.dto.request.LogoutRequest;
+import com.haichann.url_shortener.model.dto.request.RefreshTokenRequest;
 import com.haichann.url_shortener.model.dto.response.AuthenticationResponse;
 import com.haichann.url_shortener.service.AuthenticationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import com.haichann.url_shortener.model.dto.request.LocalLoginRequest;
 
@@ -51,5 +50,29 @@ public class AuthController {
                 .responseData(result)
                 .build();
     }
-    
+
+    @PostMapping("/refresh")
+    @Operation(
+            summary = "Refresh access token",
+            description = "Refreshes the JWT access token using a valid refresh token."
+    )
+    public ApiResponse<AuthenticationResponse> refreshToken(@Valid @RequestBody RefreshTokenRequest refreshToken) {
+        var result = authenticationService.refreshToken(refreshToken);
+        return ApiResponse.<AuthenticationResponse>builder()
+                .responseData(result)
+                .build();
+    }
+
+    @PostMapping("/logout")
+    @Operation(
+            summary = "Logout and invalidate refresh token",
+            description = "Logs out the user and invalidates the provided refresh token."
+    )
+    public ApiResponse<Void> logout(
+            @RequestHeader("Authorization") String authorizationHeader,
+            @Valid @RequestBody LogoutRequest request
+    ) {
+        authenticationService.logout(authorizationHeader, request);
+        return ApiResponse.<Void>builder().build();
+    }
 }

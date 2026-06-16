@@ -3,9 +3,12 @@ package com.haichann.url_shortener.config;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.haichann.url_shortener.base.ErrorResponse;
 import com.haichann.url_shortener.exception.AppException;
+import com.haichann.url_shortener.exception.ErrorCode;
 import com.haichann.url_shortener.helper.JwtHelper;
 import com.haichann.url_shortener.model.enums.UserStatus;
 import com.haichann.url_shortener.repository.UserRepo;
+import com.haichann.url_shortener.service.AccessTokenBlacklistService;
+import com.nimbusds.jwt.JWTClaimsSet;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -31,10 +34,11 @@ import java.util.List;
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
-    static String BEARER_PREFIX = "Bearer ";
+    private static final String BEARER_PREFIX = "Bearer ";
 
     JwtHelper jwtHelper;
     UserRepo userRepo;
+    AccessTokenBlacklistService accessTokenBlacklistService;
     ObjectMapper objectMapper;
     MessageSource messageSource;
 
@@ -53,7 +57,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String token = authorizationHeader.substring(BEARER_PREFIX.length());
         String email;
         try {
-            email = jwtHelper.validateToken(token);
+            JWTClaimsSet claims = jwtHelper.validateTokenAndGetClaims(token);
+            if (accessTokenBlacklistService.isBlacklisted(claims.getJWTID())) {
+                throw new AppException(ErrorCode.TOKEN_REVOKED);
+            }
+            email = claims.getSubject();
         } catch (AppException exception) {
             response.setStatus(exception.getErrorCode().getStatusCode().value());
             response.setContentType("application/json");

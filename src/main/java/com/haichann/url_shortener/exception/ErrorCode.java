@@ -20,7 +20,11 @@ public enum ErrorCode {
     INVALID_CREDENTIALS("error.invalid_credentials", HttpStatus.UNAUTHORIZED),
 
     TOKEN_EXPIRED("error.token_expired", HttpStatus.UNAUTHORIZED),
-    INVALID_TOKEN("error.invalid_token", HttpStatus.UNAUTHORIZED);
+    INVALID_TOKEN("error.invalid_token", HttpStatus.UNAUTHORIZED),
+    TOKEN_REVOKED("error.token_revoked", HttpStatus.UNAUTHORIZED),
+    REFRESH_TOKEN_EXPIRED("error.refresh_token_expired", HttpStatus.UNAUTHORIZED),
+    INVALID_REFRESH_TOKEN("error.invalid_refresh_token", HttpStatus.UNAUTHORIZED),
+    REFRESH_TOKEN_REUSED("error.refresh_token_reused", HttpStatus.UNAUTHORIZED);
 
     private final String message;
     private final HttpStatus statusCode;
