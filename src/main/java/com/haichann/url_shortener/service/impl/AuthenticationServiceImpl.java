@@ -57,6 +57,9 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         User user = userRepo.getUserByEmail(request.getEmail())
                 .orElseThrow(() -> new AppException(ErrorCode.INVALID_CREDENTIALS));
 
+        if (user.getPasswordHash() == null) {
+            throw new AppException(ErrorCode.INVALID_CREDENTIALS, "error.use_oauth_login");
+        }
         if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
             throw new AppException(ErrorCode.INVALID_CREDENTIALS);
         }
