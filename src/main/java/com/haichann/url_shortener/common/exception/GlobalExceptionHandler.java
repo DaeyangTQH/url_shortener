@@ -6,14 +6,16 @@ import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import org.springframework.context.MessageSource;
-import org.springframework.context.NoSuchMessageException;
 import org.springframework.context.i18n.LocaleContextHolder;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.time.Instant;
+import java.util.Locale;
 
 @RestControllerAdvice
 @RequiredArgsConstructor
@@ -23,19 +25,21 @@ public class GlobalExceptionHandler {
     MessageSource messageSource;
 
     @ExceptionHandler(AppException.class)
-    public ErrorResponse handleAppException(AppException exception, HttpServletRequest request) {
+    public ResponseEntity<ErrorResponse> handleAppException(AppException exception, HttpServletRequest request) {
         var errorCode = exception.getErrorCode();
 
-        return ErrorResponse.builder()
+        ErrorResponse body = ErrorResponse.builder()
                 .message(resolveMessage(exception.getMessage()))
                 .error(errorCode.name())
                 .timestamp(Instant.now())
                 .path(request.getRequestURI())
                 .build();
+
+        return ResponseEntity.status(errorCode.getStatusCode()).body(body);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ErrorResponse handleValidationException(
+    public ResponseEntity<ErrorResponse> handleValidationException(
             MethodArgumentNotValidException ex,
             HttpServletRequest request
     ) {
@@ -46,12 +50,14 @@ public class GlobalExceptionHandler {
                 .map(this::resolveValidationMessage)
                 .orElse(resolveMessage("validation.failed"));
 
-        return ErrorResponse.builder()
+        ErrorResponse body = ErrorResponse.builder()
                 .message(message)
                 .error("INVALID_REQUEST")
                 .timestamp(Instant.now())
                 .path(request.getRequestURI())
                 .build();
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
     }
 
     private String resolveValidationMessage(FieldError fieldError) {
@@ -59,11 +65,16 @@ public class GlobalExceptionHandler {
     }
 
     private String resolveMessage(String messageKey, Object... args) {
-        try {
-            return messageSource.getMessage(messageKey, args, LocaleContextHolder.getLocale());
-        } catch (NoSuchMessageException exception) {
+        if (messageKey == null || messageKey.isBlank()) {
             return messageKey;
         }
+        // Prefer explicit default message so a missing bundle never surfaces the raw key silently.
+        Locale locale = LocaleContextHolder.getLocale();
+        String resolved = messageSource.getMessage(messageKey, args, messageKey, locale);
+        if (!messageKey.equals(resolved)) {
+            return resolved;
+        }
+        return messageSource.getMessage(messageKey, args, messageKey, Locale.ENGLISH);
     }
 
 }
