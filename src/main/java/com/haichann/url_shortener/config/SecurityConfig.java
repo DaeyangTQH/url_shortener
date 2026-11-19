@@ -1,5 +1,8 @@
 package com.haichann.url_shortener.config;
 
+import com.haichann.url_shortener.auth.oauth.OAuth2LoginFailureHandler;
+import com.haichann.url_shortener.auth.oauth.OAuth2LoginSuccessHandler;
+import com.haichann.url_shortener.auth.security.JwtAuthenticationFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -20,6 +23,9 @@ public class SecurityConfig {
             "/api/v1/auth/login",
             "/api/v1/auth/register",
             "/api/v1/auth/refresh",
+
+            "/oauth2/**",
+            "/login/**",
             "/swagger-ui.html",
             "/swagger-ui/**",
             "/v3/api-docs",
@@ -27,12 +33,25 @@ public class SecurityConfig {
     };
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtAuthenticationFilter jwtAuthenticationFilter) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http,
+                                                   JwtAuthenticationFilter jwtAuthenticationFilter,
+                                                   OAuth2LoginSuccessHandler oauth2LoginSuccessHandler,
+                                                   OAuth2LoginFailureHandler oauth2LoginFailureHandler) throws Exception {
         http.csrf(AbstractHttpConfigurer::disable)
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .sessionManagement(session ->
+                        session.sessionCreationPolicy(
+                                SessionCreationPolicy.IF_REQUIRED // Phục vụ quá trình OAuth handshake
+                        )
+                )
+
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(PUBLIC_ENDPOINTS).permitAll()
                         .anyRequest().authenticated())
+
+                .oauth2Login(oauth2 -> oauth2
+                        .successHandler(oauth2LoginSuccessHandler)
+                        .failureHandler(oauth2LoginFailureHandler))
+
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

@@ -1,10 +1,10 @@
 package com.haichann.url_shortener.config;
 
-import com.haichann.url_shortener.model.entity.Role;
-import com.haichann.url_shortener.model.entity.User;
-import com.haichann.url_shortener.model.enums.UserStatus;
-import com.haichann.url_shortener.repository.RoleRepo;
-import com.haichann.url_shortener.repository.UserRepo;
+import com.haichann.url_shortener.user.entity.Role;
+import com.haichann.url_shortener.user.entity.User;
+import com.haichann.url_shortener.user.enums.UserStatus;
+import com.haichann.url_shortener.user.repository.RoleRepo;
+import com.haichann.url_shortener.user.repository.UserRepo;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
