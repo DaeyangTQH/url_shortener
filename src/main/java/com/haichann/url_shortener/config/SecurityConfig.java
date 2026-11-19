@@ -1,5 +1,8 @@
 package com.haichann.url_shortener.config;
 
+import com.haichann.url_shortener.auth.oauth.OAuth2LoginFailureHandler;
+import com.haichann.url_shortener.auth.oauth.OAuth2LoginSuccessHandler;
+import com.haichann.url_shortener.auth.security.JwtAuthenticationFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
