@@ -37,6 +37,10 @@ build/
 .env.local
 .env.*.local
 
+### frontend ###
+client/node_modules/
+client/dist/
+
 ### docker local ###
 docker-compose.dev.yaml
 
