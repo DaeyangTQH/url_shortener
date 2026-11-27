@@ -1,5 +1,6 @@
 package com.haichann.url_shortener.url.service.impl;
 
+import com.haichann.url_shortener.common.base.PageResponse;
 import com.haichann.url_shortener.common.exception.AppException;
 import com.haichann.url_shortener.common.exception.ErrorCode;
 import com.haichann.url_shortener.url.dto.CreateUrlRequest;
@@ -15,12 +16,13 @@ import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.experimental.NonFinal;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.net.URI;
 import java.time.LocalDateTime;
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -64,12 +66,12 @@ public class UrlServiceImpl implements UrlService {
 
     @Transactional(readOnly = true)
     @Override
-    public List<UrlResponse> listMine(String email) {
+    public PageResponse<UrlResponse> listMine(String email, Pageable pageable) {
         User user = getUserByEmailOrThrow(email);
-        return urlShortenRepo.findByUserIdAndIsDeletedFalseOrderByCreatedAtDesc(user.getId())
-                .stream()
-                .map(this::toResponse)
-                .toList();
+        Page<UrlResponse> page = urlShortenRepo
+                .findByUserIdAndIsDeletedFalse(user.getId(), pageable)
+                .map(this::toResponse);
+        return PageResponse.from(page);
     }
 
     @Transactional(readOnly = true)
