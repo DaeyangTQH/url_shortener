@@ -2,9 +2,10 @@ package com.haichann.url_shortener.url.repository;
 
 import com.haichann.url_shortener.common.base.BaseRepository;
 import com.haichann.url_shortener.url.entity.UrlShorten;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -16,5 +17,5 @@ public interface UrlShortenRepo extends BaseRepository<UrlShorten, Long> {
 
     Optional<UrlShorten> findByIdAndIsDeletedFalse(Long id);
 
-    List<UrlShorten> findByUserIdAndIsDeletedFalseOrderByCreatedAtDesc(Long userId);
+    Page<UrlShorten> findByUserIdAndIsDeletedFalse(Long userId, Pageable pageable);
 }

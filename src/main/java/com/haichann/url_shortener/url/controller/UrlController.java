@@ -1,6 +1,7 @@
 package com.haichann.url_shortener.url.controller;
 
 import com.haichann.url_shortener.common.base.ApiResponse;
+import com.haichann.url_shortener.common.base.PageResponse;
 import com.haichann.url_shortener.config.OpenApiConfig;
 import com.haichann.url_shortener.url.dto.CreateUrlRequest;
 import com.haichann.url_shortener.url.dto.UrlResponse;
@@ -13,6 +14,9 @@ import jakarta.validation.Valid;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -21,8 +25,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/urls")
@@ -53,13 +55,16 @@ public class UrlController {
     @GetMapping
     @Operation(
             summary = "List my shortened URLs",
-            description = "Returns all non-deleted short links owned by the authenticated user."
+            description = "Returns a paginated list of non-deleted short links owned by the authenticated user. "
+                    + "Use page, size, and sort query params (e.g. sort=createdAt,desc)."
     )
-    public ApiResponse<List<UrlResponse>> listMine(
-            @Parameter(hidden = true) Authentication authentication
+    public ApiResponse<PageResponse<UrlResponse>> listMine(
+            @Parameter(hidden = true) Authentication authentication,
+            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC)
+            Pageable pageable
     ) {
-        return ApiResponse.<List<UrlResponse>>builder()
-                .responseData(urlService.listMine(authentication.getName()))
+        return ApiResponse.<PageResponse<UrlResponse>>builder()
+                .responseData(urlService.listMine(authentication.getName(), pageable))
                 .build();
     }
 
