@@ -2,8 +2,8 @@ package com.haichann.url_shortener.auth.security;
 
 import com.haichann.url_shortener.common.exception.AppException;
 import com.haichann.url_shortener.common.exception.ErrorCode;
+import com.haichann.url_shortener.config.JwtProperties;
 import com.haichann.url_shortener.user.entity.User;
-import com.haichann.url_shortener.user.repository.UserRepo;
 import com.nimbusds.jose.*;
 import com.nimbusds.jose.crypto.MACSigner;
 import com.nimbusds.jose.crypto.MACVerifier;
@@ -11,8 +11,6 @@ import com.nimbusds.jwt.JWTClaimsSet;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
-import lombok.experimental.NonFinal;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.security.SecureRandom;
@@ -27,18 +25,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class JwtHelper {
 
-    @NonFinal
-    @Value("${jwt.secret-key}")
-    String secretKey;
-
-    @NonFinal
-    @Value("${jwt.issuer}")
-    String issuer;
-
-    @NonFinal
-    @Value("${jwt.expiration-minutes}")
-    long expirationMinutes;
-
+    JwtProperties jwtProperties;
 
     public String validateToken(String token) {
         return validateTokenAndGetClaims(token).getSubject();
@@ -47,10 +34,10 @@ public class JwtHelper {
     public JWTClaimsSet validateTokenAndGetClaims(String token) {
         try {
             JWSObject jwsObject = JWSObject.parse(token);
-            JWSVerifier verifier = new MACVerifier(secretKey.getBytes());
+            JWSVerifier verifier = new MACVerifier(jwtProperties.getSecretKey().getBytes());
             if (jwsObject.verify(verifier)) {
                 JWTClaimsSet claimsSet = JWTClaimsSet.parse(jwsObject.getPayload().toJSONObject());
-                if (!issuer.equals(claimsSet.getIssuer())) {
+                if (!jwtProperties.getIssuer().equals(claimsSet.getIssuer())) {
                     throw new AppException(ErrorCode.INVALID_TOKEN);
                 }
                 if (claimsSet.getExpirationTime().before(new Date())) {
@@ -70,17 +57,17 @@ public class JwtHelper {
 
         JWTClaimsSet claims = new JWTClaimsSet.Builder()
                 .subject(user.getEmail())
-                .issuer(issuer)
+                .issuer(jwtProperties.getIssuer())
                 .jwtID(UUID.randomUUID().toString())
                 .issueTime(new Date())
-                .expirationTime(Date.from(Instant.now().plus(expirationMinutes, ChronoUnit.MINUTES)))
+                .expirationTime(Date.from(Instant.now().plus(jwtProperties.getExpirationMinutes(), ChronoUnit.MINUTES)))
                 .claim("scope", buildScope(user))
                 .claim("email", user.getEmail())
                 .build();
 
         JWSObject jwsObject = new JWSObject(header, new Payload(claims.toJSONObject()));
         try{
-            jwsObject.sign(new MACSigner(secretKey.getBytes()));
+            jwsObject.sign(new MACSigner(jwtProperties.getSecretKey().getBytes()));
             return jwsObject.serialize();
         } catch (JOSEException e) {
             throw new AppException(ErrorCode.INTERNAL_ERROR);

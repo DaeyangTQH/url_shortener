@@ -5,7 +5,8 @@ import com.haichann.url_shortener.common.exception.ErrorCode;
 import com.haichann.url_shortener.auth.security.JwtHelper;
 import com.haichann.url_shortener.auth.oauth.OAuthUserProfile;
 import com.haichann.url_shortener.auth.dto.AuthenticationResponse;
-import com.haichann.url_shortener.auth.entity.RefreshToken;
+import com.haichann.url_shortener.auth.mapper.AuthMapper;
+import com.haichann.url_shortener.config.JwtProperties;
 import com.haichann.url_shortener.user.entity.User;
 import com.haichann.url_shortener.user.entity.UserIdentity;
 import com.haichann.url_shortener.user.enums.AuthProvider;
@@ -18,8 +19,6 @@ import com.haichann.url_shortener.auth.oauth.OAuth2Service;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
-import lombok.experimental.NonFinal;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -41,10 +40,9 @@ public class GoogleOAuth2ServiceImpl implements OAuth2Service {
     RoleRepo roleRepo;
     RefreshTokenRepo refreshTokenRepo;
     JwtHelper jwtHelper;
+    AuthMapper authMapper;
 
-    @NonFinal
-    @Value("${jwt.refresh-expiration-days}")
-    long refreshExpirationDays;
+    JwtProperties jwtProperties;
 
     @Override
     public AuthProvider getAuthProvider() {
@@ -92,11 +90,7 @@ public class GoogleOAuth2ServiceImpl implements OAuth2Service {
         String refreshToken = jwtHelper.generateRefreshToken();
         setRefreshToken(refreshToken, user);
 
-        return AuthenticationResponse.builder()
-                .authenticated(true)
-                .accessToken(accessToken)
-                .refreshToken(refreshToken)
-                .build();
+        return authMapper.toAuthenticationResponse(accessToken, refreshToken);
     }
 
     // Validate that the OAuth profile contains all required information
@@ -122,28 +116,13 @@ public class GoogleOAuth2ServiceImpl implements OAuth2Service {
         var userRole = roleRepo.findByRoleName("USER")
                 .orElseThrow(() -> new AppException(ErrorCode.INTERNAL_ERROR, "error.default_user_role_missing"));
 
-        User user = User.builder()
-                .username(generateUsername(profile.getEmail()))
-                .email(profile.getEmail())
-                .passwordHash(null)
-                .role(userRole)
-                .status(UserStatus.ACTIVE)
-                .emailVerified(profile.isEmailVerified())
-                .avatarImageUrl(profile.getAvatarUrl() != null ? profile.getAvatarUrl() : "")
-                .build();
+        User user = authMapper.toOAuthUser(profile, userRole, generateUsername(profile.getEmail()));
 
         return userRepo.save(user);
     }
 
     private void createUserIdentity(User user, OAuthUserProfile profile, boolean isPrimary) {
-        UserIdentity identity = UserIdentity.builder()
-                .user(user)
-                .provider(profile.getProvider())
-                .providerUserId(profile.getProviderUserId())
-                .linkedAt(LocalDateTime.now())
-                .isPrimary(isPrimary)
-                .build();
-        userIdentityRepo.save(identity);
+        userIdentityRepo.save(authMapper.toUserIdentity(user, profile, LocalDateTime.now(), isPrimary));
     }
 
     private String generateUsername(String email) {
@@ -163,15 +142,8 @@ public class GoogleOAuth2ServiceImpl implements OAuth2Service {
     }
 
     private void setRefreshToken(String refreshToken, User user) {
-        refreshTokenRepo.save(buildRefreshToken(hashToken(refreshToken), user));
-    }
-
-    private RefreshToken buildRefreshToken(String tokenHash, User user) {
-        return RefreshToken.builder()
-                .tokenHash(tokenHash)
-                .user(user)
-                .expiresAt(LocalDateTime.now().plusDays(refreshExpirationDays))
-                .build();
+        refreshTokenRepo.save(authMapper.toRefreshToken(
+                hashToken(refreshToken), user, LocalDateTime.now().plusDays(jwtProperties.getRefreshExpirationDays())));
     }
 
     private String hashToken(String token) {

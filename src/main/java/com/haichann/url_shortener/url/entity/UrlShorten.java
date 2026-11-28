@@ -5,12 +5,13 @@ import com.haichann.url_shortener.user.entity.User;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
+import org.hibernate.annotations.DynamicUpdate;
 
 import java.time.LocalDateTime;
-import java.util.List;
 
 @Entity
 @Table(name = "url_shorten")
+@DynamicUpdate // Deactivation must not write back a stale click count.
 @FieldDefaults(level = AccessLevel.PRIVATE)
 @Getter
 @Setter
@@ -22,9 +23,6 @@ public class UrlShorten extends BaseEntity {
     @ManyToOne()
     @JoinColumn(name = "user_id")
     User user;
-
-    @OneToMany(mappedBy = "urlShorten")
-    List<ClickEvent> clickEvents;
 
     @Column(name = "short_code")
     String shortCode;

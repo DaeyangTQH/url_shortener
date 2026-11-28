@@ -3,6 +3,7 @@ package com.haichann.url_shortener.auth.oauth;
 import com.haichann.url_shortener.common.exception.AppException;
 import com.haichann.url_shortener.auth.oauth.OAuthUserProfile;
 import com.haichann.url_shortener.auth.dto.AuthenticationResponse;
+import com.haichann.url_shortener.config.AppProperties;
 import com.haichann.url_shortener.user.enums.AuthProvider;
 import com.haichann.url_shortener.auth.oauth.OAuth2ProviderRegistry;
 import jakarta.servlet.http.HttpServletRequest;
@@ -11,8 +12,6 @@ import jakarta.servlet.http.HttpSession;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
-import lombok.experimental.NonFinal;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
@@ -30,9 +29,7 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
 
     OAuth2ProviderRegistry oauth2ProviderRegistry;
 
-    @NonFinal
-    @Value("${app.oauth2.frontend-redirect-url}")
-    String frontendRedirectUrl;
+    AppProperties appProperties;
 
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request,
@@ -52,7 +49,7 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
             invalidateSession(request);
 
             String redirectUrl = UriComponentsBuilder
-                    .fromUriString(frontendRedirectUrl + CALLBACK_PATH)
+                    .fromUriString(appProperties.getOauth2().frontendRedirectUrl() + CALLBACK_PATH)
                     .queryParam("accessToken", authResponse.getAccessToken())
                     .queryParam("refreshToken", authResponse.getRefreshToken())
                     .build()
@@ -72,7 +69,7 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
         invalidateSession(request);
 
         String redirectUrl = UriComponentsBuilder
-                .fromUriString(frontendRedirectUrl + CALLBACK_PATH)
+                .fromUriString(appProperties.getOauth2().frontendRedirectUrl() + CALLBACK_PATH)
                 .queryParam("error", error)
                 .build()
                 .toUriString();

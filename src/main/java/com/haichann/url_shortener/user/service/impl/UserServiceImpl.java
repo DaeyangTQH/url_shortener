@@ -34,15 +34,11 @@ public class UserServiceImpl implements UserService {
     @Override
     public ProfileDTO updateMyInfo(String email, UpdateMyInfoRequest request) {
         User currentUser = getUserByEmailOrThrow(email);
-        if (request.getUsername() != null && !request.getUsername().equals(currentUser.getUsername())) {
-            if (userRepo.existsByUsername(request.getUsername())) {
-                throw new AppException(ErrorCode.CONFLICT, "error.username_exists");
-            }
-            currentUser.setUsername(request.getUsername());
+        String username = request.getUsername();
+        if (username != null && !username.equals(currentUser.getUsername()) && userRepo.existsByUsername(username)) {
+            throw new AppException(ErrorCode.CONFLICT, "error.username_exists");
         }
-        if (request.getAvatarImageUrl() != null) {
-            currentUser.setAvatarImageUrl(request.getAvatarImageUrl());
-        }
+        userMapper.updateProfile(request, currentUser);
         return userMapper.toProfileDTO(userRepo.save(currentUser));
     }
 

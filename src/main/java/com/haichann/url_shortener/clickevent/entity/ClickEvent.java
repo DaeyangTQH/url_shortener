@@ -1,5 +1,6 @@
-package com.haichann.url_shortener.url.entity;
+package com.haichann.url_shortener.clickevent.entity;
 
+import com.haichann.url_shortener.url.entity.UrlShorten;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
@@ -16,7 +17,8 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 public class ClickEvent {
 
-    @ManyToOne @JoinColumn(name = "url_id")
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "url_id", nullable = false)
     UrlShorten urlShorten;
 
     @Id
@@ -50,6 +52,8 @@ public class ClickEvent {
 
     @PrePersist
     public void prePersist() {
-        this.clickedAt = LocalDateTime.now();
+        if (clickedAt == null) {
+            clickedAt = LocalDateTime.now();
+        }
     }
 }

@@ -1,10 +1,12 @@
 package com.haichann.url_shortener.auth.oauth;
 
+import com.haichann.url_shortener.auth.mapper.AuthMapper;
 import com.haichann.url_shortener.common.exception.AppException;
 import com.haichann.url_shortener.common.exception.ErrorCode;
 import com.haichann.url_shortener.auth.oauth.OAuthUserProfile;
 import com.haichann.url_shortener.user.enums.AuthProvider;
 import com.haichann.url_shortener.auth.oauth.OAuth2ProfileExtractor;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -12,7 +14,10 @@ import org.springframework.util.StringUtils;
 import java.util.Map;
 
 @Service
+@RequiredArgsConstructor
 public class GoogleOAuth2ProfileExtractor implements OAuth2ProfileExtractor {
+    private final AuthMapper authMapper;
+
     @Override
     public AuthProvider getProvider() {
         return AuthProvider.GOOGLE;
@@ -29,13 +34,6 @@ public class GoogleOAuth2ProfileExtractor implements OAuth2ProfileExtractor {
             throw new AppException(ErrorCode.INVALID_REQUEST, "error.oauth_profile_invalid");
         }
 
-        return OAuthUserProfile.builder()
-                .provider(AuthProvider.GOOGLE)
-                .providerUserId(sub)
-                .email(email)
-                .emailVerified(true)
-                .displayName((String) attrs.get("name"))
-                .avatarUrl((String) attrs.get("picture"))
-                .build();
+        return authMapper.toGoogleProfile(sub, email, (String) attrs.get("name"), (String) attrs.get("picture"));
     }
 }

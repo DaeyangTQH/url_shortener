@@ -72,6 +72,7 @@ public class UrlController {
     @Operation(
             summary = "Get a shortened URL by id",
             description = "Returns details for a short link owned by the authenticated user."
+                    + " Returns 404 if the link does not exist, was deleted, or is not owned by the user."
     )
     public ApiResponse<UrlResponse> getById(
             @Parameter(hidden = true) Authentication authentication,
@@ -86,6 +87,7 @@ public class UrlController {
     @Operation(
             summary = "Deactivate a shortened URL",
             description = "Soft-deletes and deactivates a short link owned by the authenticated user."
+                    + " Returns 404 if the link does not exist, was deleted, or is not owned by the user."
     )
     public ApiResponse<Void> deactivate(
             @Parameter(hidden = true) Authentication authentication,
