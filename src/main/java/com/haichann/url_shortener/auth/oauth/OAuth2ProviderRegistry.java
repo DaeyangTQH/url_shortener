@@ -4,29 +4,18 @@ import com.haichann.url_shortener.common.exception.AppException;
 import com.haichann.url_shortener.common.exception.ErrorCode;
 import com.haichann.url_shortener.user.enums.AuthProvider;
 import lombok.AccessLevel;
+import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
-import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
-import java.util.List;
 import java.util.Map;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
-@Component
+@RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class OAuth2ProviderRegistry {
 
     Map<AuthProvider, OAuth2Service> services;
     Map<AuthProvider, OAuth2ProfileExtractor> extractors;
-
-    public OAuth2ProviderRegistry(List<OAuth2Service> oauth2Services,
-                                  List<OAuth2ProfileExtractor> oauth2ProfileExtractors) {
-        this.services = oauth2Services.stream()
-                .collect(Collectors.toUnmodifiableMap(OAuth2Service::getAuthProvider, Function.identity()));
-        this.extractors = oauth2ProfileExtractors.stream()
-                .collect(Collectors.toUnmodifiableMap(OAuth2ProfileExtractor::getProvider, Function.identity()));
-    }
 
     // Registration id in application.yaml must match the AuthProvider enum name
     public AuthProvider resolveProvider(String registrationId) {

@@ -1,12 +1,15 @@
 package com.haichann.url_shortener.url.service.impl;
 
+import com.haichann.url_shortener.clickevent.service.ClickEventService;
 import com.haichann.url_shortener.common.base.PageResponse;
 import com.haichann.url_shortener.common.exception.AppException;
 import com.haichann.url_shortener.common.exception.ErrorCode;
+import com.haichann.url_shortener.config.AppProperties;
 import com.haichann.url_shortener.url.dto.CreateUrlRequest;
 import com.haichann.url_shortener.url.dto.UrlResponse;
 import com.haichann.url_shortener.url.entity.UrlShorten;
 import com.haichann.url_shortener.url.helper.ShortCodeGenerator;
+import com.haichann.url_shortener.url.mapper.UrlMapper;
 import com.haichann.url_shortener.url.repository.UrlShortenRepo;
 import com.haichann.url_shortener.url.service.UrlService;
 import com.haichann.url_shortener.user.entity.User;
@@ -14,8 +17,6 @@ import com.haichann.url_shortener.user.repository.UserRepo;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
-import lombok.experimental.NonFinal;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -35,10 +36,10 @@ public class UrlServiceImpl implements UrlService {
     UrlShortenRepo urlShortenRepo;
     UserRepo userRepo;
     ShortCodeGenerator shortCodeGenerator;
+    ClickEventService clickEventService;
+    UrlMapper urlMapper;
 
-    @NonFinal
-    @Value("${app.base-url}")
-    String baseUrl;
+    AppProperties appProperties;
 
     @Transactional
     @Override
@@ -50,18 +51,9 @@ public class UrlServiceImpl implements UrlService {
                 ? request.getExpirationDate()
                 : LocalDateTime.now().plusDays(DEFAULT_EXPIRATION_DAYS);
 
-        UrlShorten urlShorten = UrlShorten.builder()
-                .user(user)
-                .originalUrl(normalizedUrl)
-                .shortCode(generateUniqueShortCode())
-                .expirationDate(expirationDate)
-                .isActive(true)
-                .passwordHash(null)
-                .maxClicks(null)
-                .clickCount(0)
-                .build();
+        UrlShorten urlShorten = urlMapper.toEntity(user, normalizedUrl, generateUniqueShortCode(), expirationDate);
 
-        return toResponse(urlShortenRepo.save(urlShorten));
+        return urlMapper.toResponse(urlShortenRepo.save(urlShorten), appProperties.getShortUrlPrefix());
     }
 
     @Transactional(readOnly = true)
@@ -70,7 +62,7 @@ public class UrlServiceImpl implements UrlService {
         User user = getUserByEmailOrThrow(email);
         Page<UrlResponse> page = urlShortenRepo
                 .findByUserIdAndIsDeletedFalse(user.getId(), pageable)
-                .map(this::toResponse);
+                .map(url -> urlMapper.toResponse(url, appProperties.getShortUrlPrefix()));
         return PageResponse.from(page);
     }
 
@@ -79,7 +71,7 @@ public class UrlServiceImpl implements UrlService {
     public UrlResponse getById(String email, Long id) {
         User user = getUserByEmailOrThrow(email);
         UrlShorten urlShorten = getOwnedUrlOrThrow(id, user);
-        return toResponse(urlShorten);
+        return urlMapper.toResponse(urlShorten, appProperties.getShortUrlPrefix());
     }
 
     @Transactional
@@ -105,16 +97,16 @@ public class UrlServiceImpl implements UrlService {
             throw new AppException(ErrorCode.RESOURCE_NOT_FOUND, "error.url_inactive");
         }
 
+        LocalDateTime now = LocalDateTime.now();
         if (urlShorten.getExpirationDate() != null
-                && urlShorten.getExpirationDate().isBefore(LocalDateTime.now())) {
+                && urlShorten.getExpirationDate().isBefore(now)) {
             throw new AppException(ErrorCode.RESOURCE_NOT_FOUND, "error.url_expired");
         }
 
-        int currentClicks = urlShorten.getClickCount() == null ? 0 : urlShorten.getClickCount();
-        urlShorten.setClickCount(currentClicks + 1);
-        urlShorten.setLastAccessedAt(LocalDateTime.now());
-        urlShorten.setUpdatedAt(LocalDateTime.now());
-        urlShortenRepo.save(urlShorten);
+        if (urlShortenRepo.incrementClicksIfActive(urlShorten.getId(), now) == 0) {
+            throw new AppException(ErrorCode.RESOURCE_NOT_FOUND, "error.url_not_found");
+        }
+        clickEventService.record(urlShorten, now);
 
         return urlShorten.getOriginalUrl();
     }
@@ -146,37 +138,12 @@ public class UrlServiceImpl implements UrlService {
     }
 
     private UrlShorten getOwnedUrlOrThrow(Long id, User user) {
-        UrlShorten urlShorten = urlShortenRepo.findByIdAndIsDeletedFalse(id)
+        return urlShortenRepo.findByIdAndUserIdAndIsDeletedFalse(id, user.getId())
                 .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND, "error.url_not_found"));
-        assertOwner(urlShorten, user);
-        return urlShorten;
-    }
-
-    private void assertOwner(UrlShorten urlShorten, User user) {
-        if (urlShorten.getUser() == null || !urlShorten.getUser().getId().equals(user.getId())) {
-            throw new AppException(ErrorCode.PERMISSION_DENIED);
-        }
     }
 
     private User getUserByEmailOrThrow(String email) {
         return userRepo.getUserByEmail(email)
                 .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND, "error.user_not_found"));
-    }
-
-    private UrlResponse toResponse(UrlShorten urlShorten) {
-        String normalizedBaseUrl = baseUrl.endsWith("/")
-                ? baseUrl.substring(0, baseUrl.length() - 1)
-                : baseUrl;
-
-        return UrlResponse.builder()
-                .id(urlShorten.getId())
-                .shortCode(urlShorten.getShortCode())
-                .shortUrl(normalizedBaseUrl + "/r/" + urlShorten.getShortCode())
-                .originalUrl(urlShorten.getOriginalUrl())
-                .expirationDate(urlShorten.getExpirationDate())
-                .isActive(urlShorten.getIsActive())
-                .clickCount(urlShorten.getClickCount())
-                .createdAt(urlShorten.getCreatedAt())
-                .build();
     }
 }

@@ -9,6 +9,8 @@ import com.haichann.url_shortener.auth.dto.LogoutRequest;
 import com.haichann.url_shortener.auth.dto.RefreshTokenRequest;
 import com.haichann.url_shortener.auth.dto.AuthenticationResponse;
 import com.haichann.url_shortener.auth.entity.RefreshToken;
+import com.haichann.url_shortener.auth.mapper.AuthMapper;
+import com.haichann.url_shortener.config.JwtProperties;
 import com.haichann.url_shortener.user.entity.User;
 import com.haichann.url_shortener.user.enums.UserStatus;
 import com.haichann.url_shortener.auth.repository.RefreshTokenRepo;
@@ -20,8 +22,6 @@ import com.nimbusds.jwt.JWTClaimsSet;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
-import lombok.experimental.NonFinal;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -46,10 +46,9 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     PasswordEncoder passwordEncoder;
     RefreshTokenRepo refreshTokenRepo;
     AccessTokenBlacklistService accessTokenBlacklistService;
+    AuthMapper authMapper;
 
-    @NonFinal
-    @Value("${jwt.refresh-expiration-days}")
-    long refreshExpirationDays;
+    JwtProperties jwtProperties;
 
     @Transactional
     @Override
@@ -75,11 +74,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         String refreshToken = jwtHelper.generateRefreshToken();
 
         setRefreshToken(refreshToken, user);
-        return AuthenticationResponse.builder()
-                .authenticated(true)
-                .accessToken(accessToken)
-                .refreshToken(refreshToken)
-                .build();
+        return authMapper.toAuthenticationResponse(accessToken, refreshToken);
     }
 
     @Transactional
@@ -96,15 +91,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         var userRole = roleRepo.findByRoleName("USER")
                 .orElseThrow(() -> new AppException(ErrorCode.INTERNAL_ERROR, "error.default_user_role_missing"));
 
-        User user = User.builder()
-                .username(request.getUsername())
-                .email(request.getEmail())
-                .passwordHash(passwordEncoder.encode(request.getPassword()))
-                .role(userRole)
-                .status(UserStatus.ACTIVE)
-                .emailVerified(false)
-                .avatarImageUrl("")
-                .build();
+        User user = authMapper.toLocalUser(request, userRole, passwordEncoder.encode(request.getPassword()));
 
         User savedUser = userRepo.save(user);
         String accessToken = jwtHelper.generateToken(savedUser);
@@ -112,11 +99,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
         setRefreshToken(refreshToken, savedUser);
 
-        return AuthenticationResponse.builder()
-                .authenticated(true)
-                .accessToken(accessToken)
-                .refreshToken(refreshToken)
-                .build();
+        return authMapper.toAuthenticationResponse(accessToken, refreshToken);
     }
 
     @Transactional
@@ -149,16 +132,13 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         oldRefreshTokenEntity.setRevokedAt(LocalDateTime.now());
         oldRefreshTokenEntity.setReplacedByTokenHash(newRefreshTokenHash);
 
-        RefreshToken newRefreshTokenEntity = buildRefreshToken(newRefreshTokenHash, user);
+        RefreshToken newRefreshTokenEntity = authMapper.toRefreshToken(
+                newRefreshTokenHash, user, LocalDateTime.now().plusDays(jwtProperties.getRefreshExpirationDays()));
 
         refreshTokenRepo.save(oldRefreshTokenEntity);
         refreshTokenRepo.save(newRefreshTokenEntity);
 
-        return AuthenticationResponse.builder()
-                .authenticated(true)
-                .accessToken(newAccessToken)
-                .refreshToken(newRefreshToken)
-                .build();
+        return authMapper.toAuthenticationResponse(newAccessToken, newRefreshToken);
     }
 
     @Transactional
@@ -183,17 +163,10 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
     private void setRefreshToken(String refreshToken, User user) {
         String hashedToken = hashToken(refreshToken);
-        RefreshToken refreshTokenEntity = buildRefreshToken(hashedToken, user);
+        RefreshToken refreshTokenEntity = authMapper.toRefreshToken(
+                hashedToken, user, LocalDateTime.now().plusDays(jwtProperties.getRefreshExpirationDays()));
 
         refreshTokenRepo.save(refreshTokenEntity);
-    }
-
-    private RefreshToken buildRefreshToken(String tokenHash, User user) {
-        return RefreshToken.builder()
-                .tokenHash(tokenHash)
-                .user(user)
-                .expiresAt(LocalDateTime.now().plusDays(refreshExpirationDays))
-                .build();
     }
 
     private String extractBearerToken(String authorizationHeader) {
